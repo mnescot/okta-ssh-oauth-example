@@ -34,9 +34,10 @@ under the License.
 /* needed for base64 decoder */
 #include <openssl/pem.h>
 
-#define DEVICE_AUTHORIZE_URL  "https://dev-57525606.okta.com/oauth2/v1/device/authorize"
-#define TOKEN_URL "https://dev-57525606.okta.com/oauth2/v1/token"
-#define CLIENT_ID "0oa15wulqt5yqD9FP5d7"
+#define DEVICE_AUTHORIZE_URL  "https://login.microsoftonline.com/TENANT/oauth2/v2.0/devicecode"
+#define TOKEN_URL "https://login.microsoftonline.com/TENANT/oauth2/v2.0/token"
+#define CLIENT_ID "CLIENT-ID"
+
 
 /* structure used for curl return */
 struct MemoryStruct {
@@ -208,9 +209,22 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
 
 			char * decoded = base64decode(payload, strlen(payload));
 
-			char * name = getValueForKey(decoded, "name");
+			char * name = getValueForKey(decoded, "upn");
+                        char * token = strtok(name, "@");
+                        char * user = NULL;
+                        (void) pam_get_user(pamh, &user, NULL);
+                        /* identify user */
+                        int pam_err, retry;
+                        if (strcmp(user,token) != 0) {
+                        return (PAM_USER_UNKNOWN);
+                        }
 
-			sprintf(prompt_message, "\n\n*********************************\n  Welcome, %s\n*********************************\n\n\n", name);
+                        /* if ((pam_err = pam_get_user(pamh, &name, NULL)) != PAM_SUCCESS)
+                        return (pam_err); */
+                        /*  if ((pwd = getpwnam(user)) == NULL)
+                        return (PAM_USER_UNKNOWN); */
+
+			sprintf(prompt_message, "\n\n*********************************\n  Welcome, %s\n***************** %s ****************\n\n\n", token, user);
 			sendPAMMessage(pamh, prompt_message);
 
                         if (curl) curl_easy_cleanup( curl ) ;
